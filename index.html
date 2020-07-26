@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+</head>
+<body>
+
+<title>Web GIS</title>
+	 <!-- Import OpenLayers, reduced, wms read only version -->
+<script src="http://localhost:8085/roadassetmanagement/libs/OpenLayers-2.13.1/OpenLayers.js" type="text/javascript"></script>
+<link rel="stylesheet" href="http://localhost:8085/roadassetmanagement/libs/OpenLayers-2.13.1/theme/default/style.css" type="text/css">
+<link rel="stylesheet" href="http://localhost:8085/roadassetmanagement/libs/OpenLayers-2.13.1/theme/default/style.css" type="text/css" />
+
+<!-- ExtJS -->
+<script type="text/javascript" src="http://localhost:8085/roadassetmanagement/libs/ext-js-gpl-master/ext-4.2.1/examples/shared/include-ext.js"></script>
+<script type="text/javascript" src="http://localhost:8085/roadassetmanagement/libs/ext-js-gpl-master/ext-4.2.1/examples/shared/options-toolbar.js"></script>
+
+<!-- JQuery -->>
+<script type="text/javascript" src="http://localhost:8085/roadassetmanagement/libs/jquery-3.5.0.js"></script>
+
+<!-- Shared -->
+<link rel="stylesheet" type="text/css" href="http://localhost:8085/roadassetmanagement/libs/ext-js-gpl-master/ext-4.2.1/examples/shared/example.css"/>
+	 
+<!-- Bootstrap JS -->
+<!-- <script
+src="https://code.jquery.com/jquery-3.5.0.js"
+integrity="sha256-r/AaFHrszJtwpe+tHyNi/XCfMxYpbsRg2Uqn0x3s2zc="
+crossorigin="anonymous"></script><script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script> -->
+
+<script type="text/javascript">
+var popup, options, viewport, vecLayer1, vecLayer2, store1, store2, south, map, style, grid1, mapPanel, st, modifyControl, url1, layer_win, wfs_capab_store, wms_capab_store ;
+Ext.Loader.setConfig({
+    enabled: true,
+    disableCaching: false,
+    paths: {
+        GeoExt: "http://localhost:8085/roadassetmanagement/libs/geoext2-2.1.0/src/GeoExt"
+    }
+});
+
+Ext.require([
+    'GeoExt.tree.OverlayLayerContainer',
+    'GeoExt.tree.BaseLayerContainer',
+    'GeoExt.data.LayerTreeModel',
+    'GeoExt.Action',
+    'GeoExt.data.reader.WfsCapabilities',
+    'GeoExt.data.WfsCapabilitiesLayerStore',
+	'GeoExt.data.WmsCapabilitiesLayerStore',
+    'GeoExt.data.reader.WmsCapabilities',
+    'GeoExt.data.AttributeStore',
+    'GeoExt.data.FeatureStore',
+    'GeoExt.grid.column.Symbolizer',
+    'GeoExt.selection.FeatureModel',
+    'Ext.grid.GridPanel',
+    'Ext.layout.container.Border',
+	'GeoExt.data.proxy.Protocol',
+	'GeoExt.data.reader.Feature',
+	'Ext.data.reader.Json',
+	'GeoExt.Version',
+	'GeoExt.grid.column.Symbolizer',
+	'Ext.data.JsonStore',
+	'Ext.data.proxy.Ajax',
+    'Ext.data.reader.Json',
+    'Ext.data.writer.Json',
+	'GeoExt.slider.LayerOpacity',
+	'GeoExt.data.reader.WmsCapabilities',
+	'GeoExt.data.WmsCapabilitiesLayerModel',
+	'GeoExt.data.OwsStore',
+	'GeoExt.data.reader.WmsCapabilities',
+	'GeoExt.panel.Legend',
+	'GeoExt.container.LayerLegend',
+	'GeoExt.container.WmsLegend',
+    'GeoExt.container.UrlLegend',
+    'GeoExt.container.VectorLegend',
+]);
+
+
+Ext.onReady(function() {
+   	
+    Ext.QuickTips.init();
+
+    	var bounds = new OpenLayers.Bounds(
+            667589.9375, 9180812,
+            676176.5, 9207159
+        );
+		options = {
+			maxExtent: bounds,
+            projection: "EPSG:32749",
+			allOverlays: true,
+            units: 'degrees',
+            //center: new OpenLayers.LonLat(688972.0625,9154607),
+			zoom: 5,
+		};
+		
+        map = new OpenLayers.Map('map', options);
+				
+		var rj_peta = new OpenLayers.Layer.WMS(
+            "rj_peta", "http://localhost:8085/geoserver/wms",
+            {
+                LAYERS: 'roadassetmanagement:rumija_gresik',
+                STYLES: '',
+                format: 'image/png',
+				tiled: true,
+				transparent: true
+            },
+			{
+			    displayInLayerSwitcher: true,
+			    isBaseLayer: false,
+			    transitionEffect: 'resize'
+		});
+
+        var raster_peta = new OpenLayers.Layer.WMS(
+            "raster_peta", "http://localhost:8085/geoserver/wms",
+            {
+                LAYERS: 'roadassetmanagement:rec2',
+                STYLES: '',
+                format: 'image/png',
+				tiled: true,
+				transparent: true
+            },
+			{
+			    displayInLayerSwitcher: true,
+			    isBaseLayer: false,
+			    transitionEffect: 'resize'
+		});
+				
+		map.addLayers([raster_peta, rj_peta]);
+
+        // map.zoomToExtent(new OpenLayers.Bounds(
+        //     667589.9375, 9180812,
+        //     676176.5, 9207159
+        // ));
+
+        map.addControl(
+            new OpenLayers.Control.MousePosition({
+                prefix:'Longitude|Lattitude</a> coordinates: ',
+                separator: ' | ',
+                numDigits: 2,
+                emptyString: 'Mouse is not over map.'
+				//displayProjection: new OpenLayers.Projection("EPSG:4326")
+            })
+        );
+
+        //pan map
+			
+		var pan = Ext.create('GeoExt.Action',{
+		    tooltip: "Move Map",
+			icon:"http://localhost:8085/roadassetmanagement/icon/move.svg",
+            enableToggle: true,
+            pressed: false,
+            allowDepress: true,
+            control: new OpenLayers.Control.Navigation(),
+            map: map,
+            toggleGroup: 'tools'
+        });
+				
+		var pan_map = Ext.create('Ext.Button', pan);
+
+        var zoomout = Ext.create('Ext.Button',{
+            handler: function(){
+                map.zoomOut();
+            },
+            tooltip: "Zoom out",
+            icon:"http://localhost:8085/roadassetmanagement/icon/zoomout.svg",
+        });
+
+        var zoom_out = Ext.create('Ext.Button', zoomout);
+			
+		// rectangle zoom		
+        
+        var zoomin = Ext.create('GeoExt.Action',{			
+            icon:"http://localhost:8085/roadassetmanagement/icon/zoomin.svg",
+			control: new OpenLayers.Control.ZoomBox(),
+			map: map,
+			toggleGroup: 'tools',
+            allowDepress: true,
+            pressed: false,
+			enableToggle: true,
+            tooltip: "Zoom in"
+        });
+		
+        var zoom_in = Ext.create('Ext.Button', zoomin);
+	
+	    //get feature info			 
+		
+        var info = Ext.create('GeoExt.Action',{
+                tooltip: "Data Aset",
+			    icon:"http://localhost:8085/roadassetmanagement/icon/info.svg",
+			    text:"Data Aset",
+                enableToggle: true,
+                allowDepress: true,
+                control: new OpenLayers.Control.WMSGetFeatureInfo({
+                url: "http://localhost:8085/geoserver/wms",
+                title: 'Data aset',
+                queryVisible: true,
+                eventListeners: {
+                    getfeatureinfo: function(event) {
+					    if(popup) {map.removePopup(popup);}
+                        popup = new OpenLayers.Popup.FramedCloud(
+                            "chicken", 
+                            map.getLonLatFromPixel(event.xy),
+                            null,
+                            event.text,
+                            null,
+                            true
+                        );
+					    map.addPopup(popup);
+                    }
+                }
+            }),
+            map: map,
+            toggleGroup: 'tools'
+        });
+		
+		var get_info = Ext.create('Ext.Button', info);
+
+        //Clear selection
+
+        var clear_selection =  Ext.create('Ext.Button',{
+            tooltip: "Clear Selection",
+			icon: "http://localhost:8085/manajemenasetjalantol/icon/minus.svg",
+            handler: function(){
+                if (popup){popup.destroy();}
+				if (vecLayer1){vecLayer1.destroyFeatures();}
+				if (layer_win){layer_win.destroy();}
+				grid1.destroy();
+				south.collapse();
+				query_panel.getForm().reset();
+			}
+        });
+
+
+        var mapPanel = Ext.create('GeoExt.panel.Map', {
+            map: map,
+			region: 'center',
+			stateful: true,
+            tbar: [pan_map, zoom_in,zoom_out,get_info, clear_selection],
+            dockedItems: [{
+                xtype: 'toolbar',
+                dock: 'top',
+                items: []
+            }]
+        });	
+
+        wfs_capab_store = Ext.create('GeoExt.data.WFSCapabilitiesStore',{
+            url: "http://localhost:8085/geoserver/wfs?service=wfs&version=1.0.0&request=getCapabilities",
+            autoLoad: true,
+		    layerOptions: function() {
+                return {
+                    visibility: false,
+                    displayInLayerSwitcher: false,
+                    strategies: [new OpenLayers.Strategy.BBOX({ratio: 1})]
+                };
+            }
+            // set as a function that returns a hash of layer options.  This allows
+            // to have new objects created upon each new OpenLayers.Layer.Vector
+            // object creations.
+        });
+
+	    wfs_capab_store.load();		
+
+        wms_capab_store = Ext.create('GeoExt.data.WMSCapabilitiesStore',{
+            url: "http://localhost:8085/geoserver/wms?request=getCapabilities",
+		    autoLoad: true
+        });
+
+        var menuC = Ext.create('Ext.menu.Menu', {
+            items: [{
+            //     text: "Zoom to Layer Extent",
+            //     handler: function () {
+			//         var snode = tree.getSelectionModel().getSelection();
+			//         var layer1 = snode[0].get('text');
+			//         var wms_store = Ext.create('GeoExt.data.WMSCapabilitiesStore',{
+            //             url: "http://localhost:8085/geoserver/wms?request=getCapabilities",
+		    //             autoLoad: true,
+	        //             listeners : {
+            //                 load : function(store) {
+           	//                 var index = store.findExact( 'title', snode[0].get('text'));
+			//                 var rec = store.getAt(index);
+	    	//                 var extent = rec.get("llbbox");
+	        //                 map.zoomToExtent(new OpenLayers.Bounds(extent));
+			// 		        }
+            //             }
+            //         });
+	        //     },
+	        //     scope: this
+            // },
+	        //{
+		        text: 'Remove Layer',
+                handler: function(){
+			        var snode = tree.getSelectionModel().getSelection();
+				    var layer = snode[0].get('layer');
+			        mapPanel.map.removeLayer(layer);
+			    }
+		    }]
+        });
+	
+        var store = Ext.create('Ext.data.TreeStore', {
+            model: 'GeoExt.data.LayerTreeModel',
+            root: {
+                expanded: true,
+                children: [
+                    {
+                        plugins: ['gx_overlaylayercontainer'],
+                        expanded: true
+                    },
+                    {
+                        plugins: ['gx_baselayercontainer'],
+                        expanded: true,
+                        text: "Base Maps"
+                    }
+                ]
+            }
+        });
+
+        //  var layer;
+
+		var tree = Ext.create('GeoExt.tree.Panel', {
+            border: true,
+            region: "west",
+            title: "Layers",
+            width: 250,
+            split: true,
+            collapsible: true,
+            autoScroll: true,
+            store: store,
+            rootVisible: false,
+            lines: false,
+            viewConfig: {
+			    plugins: [{
+                    ptype: 'treeviewdragdrop',
+                    appendOnly: false
+                }],
+                listeners: {
+                    itemcontextmenu: function(view, rec, node, index, event) {
+                        event.stopEvent(); // stops the default event. i.e. Windows Context Menu
+                        menuC.showAt(event.getXY()); // show context menu where user right clicked
+                        return false;
+                    }
+                }
+            },
+			
+            tbar: [{
+                text: 'Available Layers',
+                handler: function(){
+                    var wms_grid = Ext.create('Ext.grid.GridPanel', {
+                        store: wms_capab_store,
+                        id: "wms_grid",
+                        columns: [
+                            {header: "Title", dataIndex: "title", sortable: true},
+                            {header: "Name", dataIndex: "name", sortable: true},
+                            {header: "Queryable", dataIndex: "queryable", sortable: true, width: 70},
+                            {id: "description", header: "Description", dataIndex: "abstract"}
+                        ],
+                        viewConfig: {
+                            //Return CSS class to apply to rows depending upon data values
+                            getRowClass: function(record, index) {}
+                        },
+                        autoExpandColumn: "description",
+                        height: 300,
+                        width: 650,
+                        selType: 'rowmodel',
+                        buttons: [{
+                            text: 'Add to Map',
+                            handler: function(){
+                                var record = wms_grid.getSelectionModel().getSelection();
+                                var layer_name = record[0].get('name');
+                                var layer_title = record[0].get('title');
+                                var layer = new OpenLayers.Layer.WMS(
+                                    layer_title, "http://localhost:8085/geoserver/wms",
+                                    {
+                                        LAYERS: layer_name,
+                                        STYLES: '',
+                                        format: 'image/png',
+                                        tiled: true,
+                                        transparent: true
+                                    },
+                                    {
+                                        displayInLayerSwitcher: true,
+                                        isBaseLayer: false,
+                                        transitionEffect: 'resize'
+                                    }
+                                );
+                                map.addLayer(layer);
+                                //map.zoomToExtent(new OpenLayers.Bounds(record[0].get("llbbox")));
+                            }
+                        }]
+                    });
+
+                    if(layer_win) {layer_win.destroy();}
+        
+                    layer_win=Ext.create('Ext.Window',{
+                        title: "Layers Library",
+                        items: wms_grid,
+                        layout:'fit'
+                    }); 
+
+                    layer_win.show();
+                }
+            }],
+		    
+            bbar: [{
+                text: 'Remove Layer',
+                handler: function(){
+			        var sel_node = tree.getSelectionModel().getSelection();
+			        var layer = sel_node[0].get('layer');
+			        mapPanel.map.removeLayer(layer);
+		    	}
+		    }]
+        });
+
+        var legend_panel = Ext.create('GeoExt.panel.Legend', {
+		    region: "west",
+            title: "Legend",
+			defaults: {
+                labelCls: 'mylabel',
+                style: 'padding:5px'
+            },
+            width: 250,
+            split: true,
+            collapsible: true,
+            autoScroll: true,
+			rootVisible: false,
+            lines: false,
+		});
+        
+        var layer_combo = Ext.create('Ext.form.ComboBox', {
+	        region: 'east',
+            store: wfs_capab_store,
+		    fieldLabel: 'Layer',
+		    displayField:'title',
+		    valueField: 'name',
+            typeAhead: true,
+            mode: 'local',
+            forceSelection: true,
+            triggerAction: 'all',
+            emptyText:'Select Layer',
+            selectOnFocus:true,
+		    listeners: { 
+                select: function(combo, records) {
+                    // note that records are a array of records to be prepared for multiselection
+                    // therefore use records[0] to access the selected record
+				    z = combo.getValue();
+                    var attribute_store = Ext.create('GeoExt.data.AttributeStore', {
+                        url: "http://localhost:8085/geoserver/wfs?service=WFS&request=DescribeFeatureType&version=1.1.0&typeName="+z,
+	                    autoLoad: true,
+                    });
+                    attribute_combo.bindStore(attribute_store);
+                    attribute_store.load();
+                }
+            }
+        });
+
+        var attribute_combo = Ext.create('Ext.form.ComboBox', {
+	        region: 'east',
+		    fieldLabel: 'attribute',
+            displayField:'name',
+	    	valueField:'name',
+            typeAhead: true,
+            mode: 'local',
+            forceSelection: true,
+            triggerAction: 'all',
+            emptyText:'Select Atribut',
+            selectOnFocus:true,		
+		    listeners: { 
+                select: function(combo, record, index) {},
+                expand: function(combo, record, index) {
+                    // note that records are a array of records to be prepared for multiselection
+                    // therefore use records[0] to access the selected record
+				    combo.getStore().filter([
+                        {
+                            fn   : function(record) {
+                                return record[0].get('name') != 'the_geom' && record[0].get('name') != 'geom'
+                            },
+                        scope: this}
+                    ]);
+				}
+            }
+        });
+
+        var opeartor_store = Ext.create('Ext.data.Store', {
+            fields:['name', 'operator'],
+            data: [
+                {name:'>=', operator:'>='},
+                {name:'<=', operator:'<='},
+			    {name:'=', operator:'='},
+			    {name:'Like', operator:'ILike'}
+			],
+			autoLoad: true,
+        });
+
+        var operator_combo = Ext.create('Ext.form.ComboBox', {
+	        region: 'east',
+	        id:'operator_combo',
+            store: opeartor_store,
+		    fieldLabel: 'opeartor',
+		    displayField:'name',
+		    valueField:'operator',
+		    typeAhead: true,
+            mode: 'local',
+            forceSelection: true,
+            triggerAction: 'all',
+            emptyText:'Select Operator',
+            selectOnFocus:true,
+		    listeners: { 
+                select: function(combo, record, index) {
+                    // note that records are a array of records to be prepared for multiselection
+                    // therefore use records[0] to access the selected record
+				    z = combo.getValue();
+				}
+            }
+        }); 
+
+        var query_panel = Ext.create('Ext.form.FormPanel', {
+            title: 'Select Features by Attributes',
+            frame: true,
+		    autoScroll: true,
+            border: false,
+            autoScroll: true,
+            //collapsed: true,
+			collapsible: true,
+		    region:'east',
+            items: [
+                layer_combo, attribute_combo, operator_combo,
+			    {
+			        xtype: 'textfield',
+				    id: 'Value',
+                    fieldLabel: 'Enter Value',
+                    name: 'Value1',
+                    emptyText:'Insert Value',
+                }
+            ],
+            buttons: [{
+                text: 'Query',
+                handler: function(){
+                    if(query_panel.getForm().isValid())
+                    {
+                        alert('form valid');
+                        var no_fields = query_panel.getComponent(attribute_combo).getStore().getCount();
+                        k = no_fields - 1;
+                        var field_name = new Array();
+                        var field_type = new Array();
+                        for (i = 0; i <= k; i++){
+                            var tttt = query_panel.getComponent(attribute_combo).getStore().getRange()[i];
+                            field_name[i] = tttt.get("name");
+                            field_type[i] = tttt.get("type");
+                        }
+                        var layer_value = query_panel.getComponent(layer_combo).getValue();
+                        var attribute_value = query_panel.getComponent(attribute_combo).getValue();
+                        var operator_value = query_panel.getComponent(operator_combo).getValue();
+                        var text_value = Ext.getCmp('Value').getValue();
+                        select_by_att(field_name,no_fields,field_type,layer_value,attribute_value,operator_value,text_value);
+                    }
+		        }
+            },
+            {
+                text: 'Load all Features',
+                handler: function(){
+                    var no_fields = query_panel.getComponent(attribute_combo).getStore().getCount();
+					k = no_fields - 1;
+					var field_name = new Array();
+					var field_type = new Array();
+					for (i = 0; i <= k; i++){
+					    var tttt = query_panel.getComponent(attribute_combo).getStore().getRange()[i];
+				        field_name[i] = tttt.get("name");
+				        field_type[i] = tttt.get("type");
+			    	}
+			        var layer_value = query_panel.getComponent(layer_combo).getValue();
+		            select_all(field_name,no_fields,field_type,layer_value);
+				}
+            }]
+        });
+
+        var editing_layer_combo = Ext.create('Ext.form.ComboBox', {
+	        region: 'east',
+            store: wfs_capab_store,
+		    fieldLabel: 'Layer',
+            //renderTo: 'container',
+		    displayField:'title',
+		    valueField: 'name',
+            typeAhead: true,
+            mode: 'local',
+            forceSelection: true,
+            triggerAction: 'all',
+            emptyText:'Select_Layer',
+            selectOnFocus:true,
+		    listeners: { 
+                select: function(combo, records) {
+                    z = combo.getValue();
+				    var attribute_store1 = Ext.create('GeoExt.data.AttributeStore', {
+                        url: "http://localhost:8085/geoserver/wfs?service=WFS&request=DescribeFeatureType&version=1.1.0&typeName="+z,
+	                    autoLoad: true,
+	                });
+                    editing_attribute_combo.bindStore(attribute_store1);
+                    attribute_store1.load();
+                }
+            }
+        });
+
+        var editing_attribute_combo = Ext.create('Ext.form.ComboBox', {
+	        region: 'east',
+            fieldLabel: 'attribute',
+		    displayField:'name',
+		    hidden: false,
+		    valueField:'name',
+		    typeAhead: true,
+            mode: 'local',
+            forceSelection: true,
+            triggerAction: 'all',
+            emptyText:'Select Atribut',
+            selectOnFocus:true,		
+		    listeners: { 
+                select: function(combo, record, index) {},
+				expand: function(combo, record, index) {
+                    combo.getStore().filter([{
+                        fn   : function(record) {
+                            return record.get('name') != 'the_geom' && record.get('name') != 'geom'
+                        },
+                        scope: this
+                    }]);
+				}
+            }
+        });
+
+        var editing_opeartor_store = Ext.create('Ext.data.Store', {
+            fields:['name', 'operator'],
+            data: [
+                {name:'DELETE', operator:'DELETE'},
+                {name:'UPDATE', operator:'UPDATE'}
+			],
+			autoLoad: true,
+        });
+
+        var editing_operator_combo = Ext.create('Ext.form.ComboBox', {
+	        region: 'east',
+	        id:'editing_operator_combo',
+            store: editing_opeartor_store,
+		    fieldLabel: 'opeartor',
+		    displayField:'name',
+		    valueField:'operator',
+		    typeAhead: true,
+            mode: 'local',
+            forceSelection: true,
+            triggerAction: 'all',
+            emptyText:'Select Operator',
+            selectOnFocus:true,
+		    listeners: { 
+                select: function(combo, record, index) {
+                    // note that records are a array of records to be prepared for multiselection
+                    // therefore use records[0] to access the selected record
+				    z = combo.getValue();
+				}
+            }
+        }); 
+
+        var editing_panel = Ext.create('Ext.form.FormPanel', {
+            title: 'Edit Layers',
+            frame: true,
+		    autoScroll: true,
+            border: false,
+			autoScroll: true,
+            //collapsed: true,
+			collapsible: true,
+            region:'east',
+            items: [
+                editing_layer_combo, editing_attribute_combo,
+                {
+			        xtype: 'textfield',
+				    id: 'nomorValue',
+                    fieldLabel: 'Enter Value',
+                    name: 'Value1',
+                    emptyText:'Masukkan nomor data',
+                }, editing_operator_combo, {
+                    xtype: 'textfield',
+				    id: 'newValue',
+                    fieldLabel: 'Enter Value1',
+                    name: 'Value',
+                    emptyText:'Data baru',
+                }
+			],
+            buttons: [{
+                text: 'Edit',
+                handler: function(){
+                    alert('button pressed');
+                    if(editing_panel.getForm().isValid()){
+                        //alert('form valid');
+                        var layer_value = editing_panel.getComponent(editing_layer_combo).getValue();
+                        var attribute_value = editing_panel.getComponent(editing_attribute_combo).getValue();
+                        var attribute_no = Ext.getCmp('nomorValue').getValue();
+                        var operator_value = editing_panel.getComponent(editing_operator_combo).getValue();
+                        var text_value = Ext.getCmp('newValue').getValue();
+                        //alert('if succeded');
+                        edit_att(layer_value,attribute_value, attribute_no, operator_value, text_value);
+                    } else {alert('if fails');}
+		        }
+            }]
+        });
+
+        var north = Ext.create('Ext.panel.Panel', {
+			title: "<center>Road Asset Management</center>",
+         	region: 'north',
+		});
+
+        south = Ext.create('Ext.panel.Panel', {
+            title: "Feature Atributes",
+		    border: false,
+			split: true,
+			frame: true,
+            autoScroll: true,
+            layout: "fit",
+		    collapsed: true,
+		    region: 'south',
+            height: 180,
+            autoScroll: true,
+            border: false,
+			split: true,
+            collapsible: true
+        });
+
+        var west = Ext.create('Ext.Panel', {
+            title: "Layers",
+		    collapsed: true,
+		    collapsible: true,
+            region: 'west',
+            //width: 300,
+            autoScroll: true,
+            border: false,
+			split: true,
+            items: [tree, legend_panel]
+        });
+
+        var query_editing = Ext.create('Ext.Panel', {
+            title: "Feature Query",
+		    collapsed: false,
+		    collapsible: true,
+            region: 'east',
+            width: 290,
+            frame: true,
+		    autoScroll: true,
+            border: false,
+			split: true,
+            items: [query_panel, editing_panel]
+        });
+	 
+        var viewport = Ext.create('Ext.Viewport', {
+            layout: "fit",
+            hideBorders: true,
+            items: {
+                layout: "border",
+                deferredRender: false,
+                items: [mapPanel, north, west, query_editing, south]
+            }
+    });
+    
+    style = new OpenLayers.StyleMap({
+        "default": new OpenLayers.Style(null, {
+            rules: [new OpenLayers.Rule({
+                symbolizer: {
+                    "Point": {
+                        pointRadius: 4,
+                        graphicName: "square",
+                        fillColor: "blue",
+                        fillOpacity: 0.5,
+                        strokeWidth: 1,
+                        strokeOpacity: 1,
+                        strokeColor: "#333333"
+                    },
+                    "Line": {
+                        strokeWidth: 2,
+                        strokeOpacity: 1,
+                        strokeColor: "#ff9933"
+                    },
+                    "Polygon": {
+                        strokeWidth: 3,
+                        strokeOpacity: 1,
+                        strokeColor: "#ff6633",
+                        fillColor: "blue",
+                        fillOpacity: 0
+                    }
+                }
+            })]
+        })
+    });	
+});
+
+function select_by_att(field_name,no_fields,field_type, layer_value, attribute_value, operator_value, text_value){
+    if (vecLayer1){
+        map.removeLayer(vecLayer1);
+    }
+    if (grid1){
+        grid1.destroy();
+    }
+    vecLayer1 = new OpenLayers.Layer.Vector("",{displayInLayerSwitcher: false, styleMap: style});
+    map.addLayers([vecLayer1]);
+    fields_name = field_name;
+    fields_no = no_fields;
+    fields_type = field_type;	
+	layer_name = layer_value;
+    attribute_name = attribute_value;
+    alert(attribute_name);
+    alert(layer_name);
+    operator_name1 = operator_value;
+    text_name = text_value;
+    if (operator_name1 == "ILike"){
+        url1 = "http://localhost:8085/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName="+layer_name+"&CQL_FILTER="+attribute_name+"+"+operator_name1+"+'"+text_name+"%25'&outputFormat=application/json"
+    }
+    else{
+        url1 = "http://localhost:8085/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName="+layer_name+"&CQL_FILTER="+attribute_name+"+"+operator_name1+"+'"+text_name+"'&outputFormat=application/json"
+        //url1 = "http://localhost:8085/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=ringkasan_jalan_data_identifikasi&CQL_FILTER=idjalantol+=+'1'&outputFormat=application/json"
+    }
+
+    //alert(url1);
+
+    columns1 = [];
+    keys1 = [];
+    for (i = 0; i<= fields_no-1; i++){
+        if (fields_type[i] == "xsd:int" || fields_type[i] == "xsd:short" || fields_type[i] == "xsd:long"){var type1 = 'int';var type2 = 'numberfield';}
+        else if (fields_type[i] == "xsd:string" || fields_type[i] == "xsd:dateTime"){var type1 = 'string';var type2 = 'textfield';}
+        else if (fields_type[i] == "xsd:double" || fields_type[i] == "xsd:decimal"){var type1 = 'float';var type2 = 'numberfield';}
+        else {var type1 = "string";var type2 = 'textfield';}
+        
+        if(fields_name[i]!= "geom" && fields_name[i]!= "the_geom"){
+            keys1.push({
+                name: fields_name[i],
+                type: type1
+            });
+            columns1.push({
+                header: fields_name[i],
+                dataIndex: fields_name[i]
+				//editor: {xtype: type2}
+            });
+        }
+    }
+
+    store1 = Ext.create('GeoExt.data.FeatureStore', {
+        storeId: "store1",  
+        fields: keys1,
+        proxy: Ext.create('GeoExt.data.proxy.Protocol',{
+            protocol: new OpenLayers.Protocol.HTTP({
+			    url: url1,
+                //url: "http://localhost:8085/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName="+layer_name+"&CQL_FILTER="+attribute_name+"+"+operator_name1+"+'"+text_name+"'&outputFormat=application/json",
+                format: new OpenLayers.Format.GeoJSON()
+            }),
+			reader: Ext.create('GeoExt.data.reader.Feature')
+        }),
+		autoLoad: true
+    });
+
+    store1.bind(vecLayer1);
+    // var extent = store1.getGeometery().getExtent();
+    // var center = ol.extent.getCenter(ext)
+	store1.on("load", function() {/*mapPanel.map.zoomToExtent(vecLayer1.getDataExtent())*/
+        //map.getView().fitExtent(vecLayer1.getExtent(), map.getSize());
+    });
+	grid1 = Ext.create('Ext.grid.GridPanel', {
+	    id: "grid1",
+	    store: store1,
+	    columns: columns1,
+	    loadMask: true,
+        selType: 'featuremodel',
+        bbar:[{
+            text: "Ledger",
+            handler: function(){
+                alert('buka ledger di halaman baru');
+                window.open("http://localhost:8085/roadassetmanagement/fetch.php?desa='13'", null);
+            }
+        }]
+    });
+    south.add(grid1);
+    south.doLayout(true);
+    south.expand(false); 
+}
+
+
+function select_all(field_name,no_fields,field_type, layer_value){
+    if (vecLayer1){
+        map.removeLayer(vecLayer1);
+    }
+    if (grid1){
+        grid1.destroy();
+    }
+    vecLayer1 = new OpenLayers.Layer.Vector("",{displayInLayerSwitcher: false, styleMap: style});
+    map.addLayers([vecLayer1]);
+
+    fields_name2 = field_name;
+    alert(fields_name2);
+    fields_no2 = no_fields;
+    fields_type2 = field_type;	
+		
+    layer_name2 = layer_value;
+
+    columns1 = [];
+    keys1 = [];
+    for (i = 0; i<= fields_no2-1; i++){
+        if (fields_type2[i] == "xsd:int" || fields_type2[i] == "xsd:short" || fields_type2[i] == "xsd:long"){var type1 = 'int';var type2 = 'numberfield';}
+        else if (fields_type2[i] == "xsd:string" || fields_type2[i] == "xsd:dateTime"){var type1 = 'string';var type2 = 'textfield';}
+        else if (fields_type2[i] == "xsd:double" || fields_type2[i] == "xsd:decimal"){var type1 = 'float';var type2 = 'numberfield';}
+        else {var type1 = "string";var type2 = 'textfield';}
+        if(fields_name2[i]!= "geom" && fields_name2[i]!= "the_geom"){
+            keys1.push({
+                name: fields_name2[i],
+                type: type1
+            });
+            columns1.push({
+                header: fields_name2[i],
+                dataIndex: fields_name2[i]
+				//editor: {xtype: type2}
+            });
+        }
+    }
+    store1 = Ext.create('GeoExt.data.FeatureStore', {
+        storeId: "store1",
+        fields: keys1,
+        proxy: Ext.create('GeoExt.data.proxy.Protocol',{
+        protocol: new OpenLayers.Protocol.HTTP({
+		    url: "http://localhost:8085/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName="+layer_name2+"&outputFormat=application/json",
+                format: new OpenLayers.Format.GeoJSON()
+            }),
+			reader: Ext.create('GeoExt.data.reader.Feature')
+        }),
+		autoLoad: true
+	});
+    
+    store1.bind(vecLayer1);
+    store1.on("load", function() {/*mapPanel.map.zoomToExtentmapPanel.map.zoomToExtent(vecLayer1.getDataExtent())*/});
+		
+	grid1 = Ext.create('Ext.grid.GridPanel', {
+	    id: "grid1",
+	    store: store1,
+	    columns: columns1,
+	    loadMask: true,
+        selType: 'featuremodel',
+    });
+    south.add(grid1);
+    south.doLayout(true);
+    south.expand(false); 
+}
+
+function edit_att(layer_value, attribute_value, attribute_no, operator_value, text_value){	
+	layer = layer_value;
+    attribute = attribute_value;
+    number = attribute_no;
+    operator = operator_value;
+    text = text_value;
+
+    alert(number);
+    alert(operator);
+    alert(layer);
+    alert(text);
+
+    if (layer != '' && attribute != '' && number != '' && operator != '' && text != ''){
+        alert('IF MASUK');
+        switch(layer){
+            case 'ringkasan_jalan_data_relasi_belanja_modal':
+                table = 'r_drbm';
+                break;
+        }
+        alert(table);
+        if(operator = 'UPDATE'){
+            alert('update masuk');
+            $.ajax({
+                type:'POST',
+                url:'save.php',
+                data:{
+                    tables : table,
+                    attributes : attribute,
+                    numbers : number,
+                    texts : text
+                },
+                success : function(/*dataResult*/){
+                    //var dataResult = JSON.parse(dataResult)
+                    //if(dataResult.statusCode == 200){
+                    //     $('#pointadding').modal('hide');
+                    // } else {
+                    //     alert('fail');
+                    // }
+                    alert('uploaded');
+                },
+                error: function() { alert('error'); }
+            });
+            alert('UPDATE public.' + table + ' SET ' + attribute + ' = ' + text + ' WHERE objectid = ' + number + ';');
+        }
+    } else {
+        alert('Data belum lengkap')
+    }
+
+}
+</script>   
+</body>
+
+
+</html>
