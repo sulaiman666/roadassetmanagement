@@ -90,14 +90,30 @@ Ext.onReady(function() {
             units: 'degrees',
             //center: new OpenLayers.LonLat(688972.0625,9154607),
 			zoom: 5,
+            //controls:[new OpenLayers.Control.MouseDefaults()],
 		};
 		
         map = new OpenLayers.Map('map', options);
-				
-		var rj_peta = new OpenLayers.Layer.WMS(
-            "rj_peta", "http://localhost:8085/geoserver/wms",
+
+        var peta_administrasi = new OpenLayers.Layer.WMS(
+            "peta_administrasi", "http://localhost:8085/geoserver/wms",
             {
-                LAYERS: 'roadassetmanagement:rumija_gresik',
+                LAYERS: 'roadassetmanagement:administrasi',
+                STYLES: '',
+                format: 'image/png',
+				tiled: true,
+				transparent: true
+            },
+			{
+			    displayInLayerSwitcher: true,
+			    isBaseLayer: false,
+			    transitionEffect: 'resize'
+		});
+				
+		var peta_rj = new OpenLayers.Layer.WMS(
+            "peta_rj", "http://localhost:8085/geoserver/wms",
+            {
+                LAYERS: 'roadassetmanagement:gresik_rumija',
                 STYLES: '',
                 format: 'image/png',
 				tiled: true,
@@ -122,9 +138,25 @@ Ext.onReady(function() {
 			    displayInLayerSwitcher: true,
 			    isBaseLayer: false,
 			    transitionEffect: 'resize'
+		    }
+        );
+
+        var gresik_DT4 = new OpenLayers.Layer.WMS(
+            "gresik_DT4", "http://localhost:8085/geoserver/wms",
+            {
+                LAYERS: 'roadassetmanagement:dt4_point',
+                STYLES: '',
+                format: 'image/png',
+				tiled: true,
+				transparent: true
+            },
+			{
+			    displayInLayerSwitcher: true,
+			    isBaseLayer: false,
+			    transitionEffect: 'resize'
 		});
 				
-		map.addLayers([raster_peta, rj_peta]);
+		map.addLayers([raster_peta, peta_administrasi, peta_rj, gresik_DT4]);
 
         // map.zoomToExtent(new OpenLayers.Bounds(
         //     667589.9375, 9180812,
@@ -140,6 +172,14 @@ Ext.onReady(function() {
 				//displayProjection: new OpenLayers.Projection("EPSG:4326")
             })
         );
+
+        // var select_interaction = new ol.interaction.Select();
+
+        // select_interaction.getFeatures().on("add", function (e) { 
+        //     var feature = e.element; //the feature selected
+        // });
+
+        // map.addInteraction(select_interaction);
 
         //pan map
 			
@@ -427,14 +467,14 @@ Ext.onReady(function() {
         var layer_combo = Ext.create('Ext.form.ComboBox', {
 	        region: 'east',
             store: wfs_capab_store,
-		    fieldLabel: 'Layer',
+		    fieldLabel: 'Data Aset',
 		    displayField:'title',
 		    valueField: 'name',
             typeAhead: true,
             mode: 'local',
             forceSelection: true,
             triggerAction: 'all',
-            emptyText:'Select Layer',
+            emptyText:'Select Data Aset',
             selectOnFocus:true,
 		    listeners: { 
                 select: function(combo, records) {
@@ -451,16 +491,27 @@ Ext.onReady(function() {
             }
         });
 
+        var administrasi_store = Ext.create('Ext.data.Store', {
+            fields:['name', 'operator'],
+            data: [
+                {name:'Provinsi', operator:'kode_prov'},
+                {name:'Kabupaten', operator:'kode_kab'},
+			    {name:'Kecamatan', operator:'kode_kec'},
+			    {name:'Desa', operator:'kode_desa'}
+			],
+			autoLoad: true,
+        });
+
         var attribute_combo = Ext.create('Ext.form.ComboBox', {
 	        region: 'east',
-		    fieldLabel: 'attribute',
+		    fieldLabel: 'Administrasi',
             displayField:'name',
 	    	valueField:'name',
             typeAhead: true,
             mode: 'local',
             forceSelection: true,
             triggerAction: 'all',
-            emptyText:'Select Atribut',
+            emptyText:'Select Administrasi',
             selectOnFocus:true,		
 		    listeners: { 
                 select: function(combo, record, index) {},
@@ -512,7 +563,7 @@ Ext.onReady(function() {
         }); 
 
         var query_panel = Ext.create('Ext.form.FormPanel', {
-            title: 'Select Features by Attributes',
+            title: 'Cari Aset jalan',
             frame: true,
 		    autoScroll: true,
             border: false,
@@ -575,7 +626,6 @@ Ext.onReady(function() {
 	        region: 'east',
             store: wfs_capab_store,
 		    fieldLabel: 'Layer',
-            //renderTo: 'container',
 		    displayField:'title',
 		    valueField: 'name',
             typeAhead: true,
@@ -592,7 +642,7 @@ Ext.onReady(function() {
 	                    autoLoad: true,
 	                });
                     editing_attribute_combo.bindStore(attribute_store1);
-                    attribute_store1.load();
+                    //attribute_store1.load();
                 }
             }
         });
@@ -601,7 +651,7 @@ Ext.onReady(function() {
 	        region: 'east',
             fieldLabel: 'attribute',
 		    displayField:'name',
-		    hidden: false,
+		    hidden: true,
 		    valueField:'name',
 		    typeAhead: true,
             mode: 'local',
@@ -622,37 +672,6 @@ Ext.onReady(function() {
             }
         });
 
-        var editing_opeartor_store = Ext.create('Ext.data.Store', {
-            fields:['name', 'operator'],
-            data: [
-                {name:'DELETE', operator:'DELETE'},
-                {name:'UPDATE', operator:'UPDATE'}
-			],
-			autoLoad: true,
-        });
-
-        var editing_operator_combo = Ext.create('Ext.form.ComboBox', {
-	        region: 'east',
-	        id:'editing_operator_combo',
-            store: editing_opeartor_store,
-		    fieldLabel: 'opeartor',
-		    displayField:'name',
-		    valueField:'operator',
-		    typeAhead: true,
-            mode: 'local',
-            forceSelection: true,
-            triggerAction: 'all',
-            emptyText:'Select Operator',
-            selectOnFocus:true,
-		    listeners: { 
-                select: function(combo, record, index) {
-                    // note that records are a array of records to be prepared for multiselection
-                    // therefore use records[0] to access the selected record
-				    z = combo.getValue();
-				}
-            }
-        }); 
-
         var editing_panel = Ext.create('Ext.form.FormPanel', {
             title: 'Edit Layers',
             frame: true,
@@ -663,20 +682,7 @@ Ext.onReady(function() {
 			collapsible: true,
             region:'east',
             items: [
-                editing_layer_combo, editing_attribute_combo,
-                {
-			        xtype: 'textfield',
-				    id: 'nomorValue',
-                    fieldLabel: 'Enter Value',
-                    name: 'Value1',
-                    emptyText:'Masukkan nomor data',
-                }, editing_operator_combo, {
-                    xtype: 'textfield',
-				    id: 'newValue',
-                    fieldLabel: 'Enter Value1',
-                    name: 'Value',
-                    emptyText:'Data baru',
-                }
+                editing_layer_combo, editing_attribute_combo
 			],
             buttons: [{
                 text: 'Edit',
@@ -685,16 +691,57 @@ Ext.onReady(function() {
                     if(editing_panel.getForm().isValid()){
                         //alert('form valid');
                         var layer_value = editing_panel.getComponent(editing_layer_combo).getValue();
-                        var attribute_value = editing_panel.getComponent(editing_attribute_combo).getValue();
-                        var attribute_no = Ext.getCmp('nomorValue').getValue();
-                        var operator_value = editing_panel.getComponent(editing_operator_combo).getValue();
-                        var text_value = Ext.getCmp('newValue').getValue();
+                        var index_layer_value = editing_panel.getComponent(editing_layer_combo).getStore().findExact('name', layer_value);
+                        var record_layer_value = editing_panel.getComponent(editing_layer_combo).getStore().getRange()[index_layer_value];
+				        var namespace_value = record_layer_value.get('namespace');
+                        
+                        var no_fields = editing_panel.getComponent(editing_attribute_combo).getStore().getCount();
+						k = no_fields - 1;
+						var field_name = new Array();
+						var field_type = new Array();
+						for (i = 0; i <= k; i++){
+				            var tttt = editing_panel.getComponent(editing_attribute_combo).getStore().getRange()[i];
+				            field_name[i] = tttt.get("name");
+                            field_type[i] = tttt.get("type");				  
+				        }
+                        editing(field_name,no_fields,field_type,layer_value,namespace_value);
+                    } else {alert('Form tidak valid');}
+		        }
+            }]
+        });
+
+        var ledger_panel = Ext.create('Ext.form.FormPanel', {
+            title: 'Ledger Panel',
+            frame: true,
+		    autoScroll: true,
+            border: false,
+			autoScroll: true,
+            //collapsed: true,
+			collapsible: true,
+            region:'east',
+            items: [
+                {
+			        xtype: 'textfield',
+				    id: 'kodeValue',
+                    fieldLabel: 'Kode Desa',
+                    name: 'Value1',
+                    emptyText:'Masukkan kode desa',
+                }
+			],
+            buttons: [{
+                text: 'Ledger',
+                handler: function(){
+                    alert('button pressed');
+                    if(ledger_panel.getForm().isValid()){
+                        //alert('form valid');
+                        var text_value = Ext.getCmp('kodeValue').getValue();
                         //alert('if succeded');
-                        edit_att(layer_value,attribute_value, attribute_no, operator_value, text_value);
+                        window.open("http://localhost:8085/roadassetmanagement/fetch.php?desa='"+text_value+"'", null);
                     } else {alert('if fails');}
 		        }
             }]
         });
+
 
         var north = Ext.create('Ext.panel.Panel', {
 			title: "<center>Road Asset Management</center>",
@@ -730,7 +777,7 @@ Ext.onReady(function() {
         });
 
         var query_editing = Ext.create('Ext.Panel', {
-            title: "Feature Query",
+            title: "Manajemen Aset",
 		    collapsed: false,
 		    collapsible: true,
             region: 'east',
@@ -739,7 +786,7 @@ Ext.onReady(function() {
 		    autoScroll: true,
             border: false,
 			split: true,
-            items: [query_panel, editing_panel]
+            items: [query_panel, /*editing_panel,*/ ledger_panel]
         });
 	 
         var viewport = Ext.create('Ext.Viewport', {
@@ -802,10 +849,12 @@ function select_by_att(field_name,no_fields,field_type, layer_value, attribute_v
     operator_name1 = operator_value;
     text_name = text_value;
     if (operator_name1 == "ILike"){
-        url1 = "http://localhost:8085/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName="+layer_name+"&CQL_FILTER="+attribute_name+"+"+operator_name1+"+'"+text_name+"%25'&outputFormat=application/json"
+        url1 = "http://localhost:8085/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName="+layer_name+"&CQL_FILTER="
+        +attribute_name+"+"+operator_name1+"+'"+text_name+"%25'&outputFormat=application/json"
     }
     else{
-        url1 = "http://localhost:8085/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName="+layer_name+"&CQL_FILTER="+attribute_name+"+"+operator_name1+"+'"+text_name+"'&outputFormat=application/json"
+        url1 = "http://localhost:8085/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName="+layer_name+"&CQL_FILTER="
+        +attribute_name+"+"+operator_name1+"+'"+text_name+"'&outputFormat=application/json"
         //url1 = "http://localhost:8085/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=ringkasan_jalan_data_identifikasi&CQL_FILTER=idjalantol+=+'1'&outputFormat=application/json"
     }
 
@@ -857,14 +906,15 @@ function select_by_att(field_name,no_fields,field_type, layer_value, attribute_v
 	    store: store1,
 	    columns: columns1,
 	    loadMask: true,
+        autoPanMapOnSelection: true,
         selType: 'featuremodel',
-        bbar:[{
-            text: "Ledger",
-            handler: function(){
-                alert('buka ledger di halaman baru');
-                window.open("http://localhost:8085/roadassetmanagement/fetch.php?desa='13'", null);
-            }
-        }]
+        // bbar:[{
+        //     text: "Ledger",
+        //     handler: function(){
+        //         alert('buka ledger di halaman baru');
+        //         window.open("http://localhost:8085/roadassetmanagement/fetch.php?desa='13'", null);
+        //     }
+        // }]
     });
     south.add(grid1);
     south.doLayout(true);
@@ -931,60 +981,198 @@ function select_all(field_name,no_fields,field_type, layer_value){
 	    loadMask: true,
         selType: 'featuremodel',
     });
+
     south.add(grid1);
     south.doLayout(true);
     south.expand(false); 
 }
 
-function edit_att(layer_value, attribute_value, attribute_no, operator_value, text_value){	
-	layer = layer_value;
-    attribute = attribute_value;
-    number = attribute_no;
-    operator = operator_value;
-    text = text_value;
+function editing(field_name,no_fields,field_type,layer_value,namespace_value){
 
-    alert(number);
-    alert(operator);
-    alert(layer);
-    alert(text);
+    fields_name3 = field_name;
+    fields_no3 = no_fields;
+    fields_type3 = field_type;	
+	layer_name3 = layer_value;
+    namspace_name3 = namespace_value;
 
-    if (layer != '' && attribute != '' && number != '' && operator != '' && text != ''){
-        alert('IF MASUK');
-        switch(layer){
-            case 'ringkasan_jalan_data_relasi_belanja_modal':
-                table = 'r_drbm';
-                break;
-        }
-        alert(table);
-        if(operator = 'UPDATE'){
-            alert('update masuk');
-            $.ajax({
-                type:'POST',
-                url:'save.php',
-                data:{
-                    tables : table,
-                    attributes : attribute,
-                    numbers : number,
-                    texts : text
-                },
-                success : function(/*dataResult*/){
-                    //var dataResult = JSON.parse(dataResult)
-                    //if(dataResult.statusCode == 200){
-                    //     $('#pointadding').modal('hide');
-                    // } else {
-                    //     alert('fail');
-                    // }
-                    alert('uploaded');
-                },
-                error: function() { alert('error'); }
+    if (vecLayer1){map.removeLayer(vecLayer1);}
+    if (grid1){grid1.destroy();}
+ 
+    vecLayer1 = new OpenLayers.Layer.Vector("",{displayInLayerSwitcher: false, styleMap: style});
+    map.addLayers([vecLayer1]);
+
+    columns1 = [];
+    keys1 = [];
+
+    columns2 = [];
+    keys2 = [];
+
+    for (i = 0; i<= fields_no3-1; i++){
+        if (fields_type3[i] == "xsd:int" || fields_type3[i] == "xsd:short" || fields_type3[i] == "xsd:long"){var type1 = 'int';var type2 = 'numberfield';}
+        else if (fields_type3[i] == "xsd:string" || fields_type3[i] == "xsd:dateTime"){var type1 = 'string';var type2 = 'textfield';}
+        else if (fields_type3[i] == "xsd:double" || fields_type3[i] == "xsd:decimal"){var type1 = 'float';var type2 = 'numberfield';}
+        else if (fields_type3[i] == "gml:PointPropertyType") {var shape = 'point';}
+        else if (fields_type3[i] == "gml:MultiPointPropertyType") {var shape = 'multipoint';}
+        else if (fields_type3[i] == "gml:MultiLineStringPropertyType") {var shape = 'line';}
+        else if (fields_type3[i] == "gml:MultiSurfacePropertyType" || fields_type3[i] == "gml:MultiPolygonPropertyType") {var shape = 'polygon';}
+        else {var type1 = "string";var type2 = 'textfield';}
+
+        if(fields_name3[i]!= "geom" && fields_name3[i]!= "the_geom"){
+            keys1.push({
+                name: fields_name3[i],
+                type: type1
             });
-            alert('UPDATE public.' + table + ' SET ' + attribute + ' = ' + text + ' WHERE objectid = ' + number + ';');
-        }
-    } else {
-        alert('Data belum lengkap')
+
+            columns1.push({
+                header: fields_name3[i],
+                dataIndex: fields_name3[i],
+				editor: {xtype: type2, allowBlank: true}
+            });
+		}
+    }
+	
+    store1 = Ext.create('GeoExt.data.FeatureStore', {
+        storeId: "store1",
+        layer: vecLayer1,
+        fields: keys1,
+        proxy: Ext.create('GeoExt.data.proxy.Protocol',{
+            protocol: new OpenLayers.Protocol.WFS.v1_1_0({
+                url: "http://localhost:8085/geoserver/wfs",
+                version: "1.1.0",
+                featureType: layer_name3,
+                featureNS: namspace_name3,
+                // srsName: "EPSG:32749",
+			    // geometryName: "the_geom",
+                //outputFormat: "JSON"
+            }),
+		    reader: Ext.create('GeoExt.data.reader.Feature')
+	    }),
+        autoLoad: true
+    });
+
+    //store1.load();
+    
+    store1.bind(vecLayer1);
+		
+	store1.on("load", function() {
+		//mapPanel.map.zoomToExtent(vecLayer1.getDataExtent())
+	});
+	
+    modifyControl = new OpenLayers.Control.ModifyFeature(
+        vecLayer1, {autoActivate: false}
+    );
+
+    if (shape == "polygon"){
+        var drawControl = new OpenLayers.Control.DrawFeature(
+            vecLayer1,
+            OpenLayers.Handler.Polygon,
+            {handlerOptions: {multi: true}}
+        );
     }
 
+    else if (shape == "line"){
+        var drawControl = new OpenLayers.Control.DrawFeature(
+            vecLayer1,
+            OpenLayers.Handler.Path,
+            {handlerOptions: {multi: true}}
+        );
+    }
+
+    else if (shape == "point"){
+        var drawControl = new OpenLayers.Control.DrawFeature(
+            vecLayer1,
+            OpenLayers.Handler.Point,
+            {handlerOptions: {multi: false}}
+        );
+    }
+
+    else if (shape == "multipoint"){
+        var drawControl = new OpenLayers.Control.DrawFeature(
+            vecLayer1,
+            OpenLayers.Handler.Point,
+            {handlerOptions: {multi: true}}
+        );
+    }
+    else {}
+
+    map.addControls([modifyControl,drawControl]);
+
+    var draw = Ext.create('GeoExt.Action',{
+        control: drawControl,
+        text: "Create",
+        enableToggle: true
+    })
+
+    var draw_but = Ext.create('Ext.Button', draw);
+
+    var modify = Ext.create('GeoExt.Action',{
+        control: modifyControl,
+        text: "Modify",
+        enableToggle: true
+    })
+
+    var modify_but = Ext.create('Ext.Button', modify);
+
+    grid1 = Ext.create('Ext.grid.GridPanel', {
+	    id: "grid1",
+        store: store1,
+        loadMask: true,
+        columns: columns1,
+        selType: 'cellmodel',
+
+        plugins: [
+            Ext.create('Ext.grid.plugin.CellEditing', {
+                clicksToEdit: 2
+            })
+        ],
+
+	    bbar:[{
+            text: "Delete",
+            handler: function() {
+                grid1.store.featureFilter = new OpenLayers.Filter({
+                    evaluate: function(feature) {
+	                    return feature.state != OpenLayers.State.DELETE;
+                    }
+                });
+
+	            var record = grid1.getSelectionModel().getSelection();
+                var id = record[0].get('id');
+                var feat = vecLayer1.getFeatureById(id);
+                vecLayer1.removeFeatures([feat]);
+
+                if (feat.state != OpenLayers.State.INSERT) {
+                    feat.state = OpenLayers.State.DELETE;
+                    vecLayer1.addFeatures([feat]);
+                }
+
+	        }
+        }, draw_but, modify_but, {
+            text: "Save",
+            handler: function() {
+                grid1.store.proxy.protocol.commit(
+                    vecLayer1.features ,{
+                        callback: function() {
+                            var layers = mapPanel.map.layers;
+                            for (var i=layers.length-1; i>=0; --i) {
+                                layers[i].redraw(true);
+                            }
+                            grid1.store.reload();
+                        }
+                    }
+                );
+            }
+        }]
+
+	});
+	
+	south.add(grid1);
+    south.doLayout(true);
+    south.expand(false); 
+
+    //var sm = grid1.getSelectionModel();
+
 }
+
 </script>   
 </body>
 
